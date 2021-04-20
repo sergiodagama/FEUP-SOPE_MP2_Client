@@ -160,24 +160,19 @@ void *send_request_and_wait_response(void * arg)
 
     //opening public fifo and sending request
     int timeout = 0;
-    int public_fd;
+    int public_fd = ERROR;
 
-    while(timeout != CLIENT_WAITING_TIMEOUT){
-        public_fd = open(public_fifo_path, O_WRONLY);
+    while(timeout != CLIENT_WAITING_TIMEOUT && public_fd == ERROR){
+        public_fd = open(public_fifo_path, O_WRONLY | O_NONBLOCK);
         sleep(1);
         timeout++;
     }
 
-    if(timeout == CLIENT_WAITING_TIMEOUT){
-        public_fifo_closed = true;
-        return NULL;
-    }
-    
-
-    //MAKE ESPERA ATIVA TODO (TIMEOUT)
-
     if(public_fd == ERROR){ 
         printf("Error while opening public fifo file!\n");
+        public_fifo_closed = true;  //to close entire program, but not working yet
+        //exit(0);
+        return NULL;
     }
 
     //creating private fifo file path ("/tmp/pid.tid") to receive server response
@@ -369,7 +364,7 @@ int main(int argc, char* argv[]){
     /*-------------------------CREATING REQUEST THREADS-------------------------*/
 
     //main thread (c0) continously creates new threads with server requests
-    while(true && !public_fifo_closed && !time_is_up) {
+    while(!public_fifo_closed && !time_is_up) {
         //sleeping for a few milliseconds
         if(random_mili_sleep() == ERROR) return ERROR;
 
@@ -393,11 +388,11 @@ int main(int argc, char* argv[]){
     printf("HERE");
     /*-------------------------ENDING PROGRAM-------------------------*/
 
+        //main thread waits for all threads to exit
+    pthread_exit(NULL);
+    
     //releasing pthread mutex structure
     pthread_mutex_destroy(&lock);
-
-    //main thread waits for all threads to exit
-    pthread_exit(NULL);
 
     return 0;
 }
