@@ -98,14 +98,14 @@ void handle_server_response(char *response, char * i_s, char * t_s, char * proce
         printf("%s\n",p[i]);
         p[i] = strtok(NULL, "; ");
     }
-
+/*
     if(p[4] == "-1"){
         printf("The request wasn't attended, because server service is closed\n");
         reg(i_s, t_s, process_id_s, thread_id_s, "-1", CLOSD);
     }
     else{
         reg(i_s, t_s, process_id_s, thread_id_s, p[4], GOTRS);
-    }
+    }*/
 }
 
 /**
@@ -120,42 +120,35 @@ void *send_request_and_wait_response(void * arg)
     pthread_mutex_lock(&lock);
 
     //message info variables
+    /*
     int t = rand() % 9 + 1;
     int i = (long int) arg;
     long int thread_id = pthread_self();
-    int process_id = getpid();
+    int process_id = getpid(); */
 
+    //creating message request to send to server
     MSG message;
-
-    message.i = (long int) arg;
+    
     message.t = rand() % 9 + 1;
     message.pid = getpid();
     message.tid = pthread_self();
     message.res = -1;
 
+    char t_s[10], i_s[10], thread_id_s[20], process_id_s[10]; //converting integers to strings
 
-    printf("t: %d\t i: %d\t thread id: %lu\t process id: %u", t, i, thread_id, process_id); //DEBUG
+    sprintf(t_s, "%d", message.t);  //DEBUG
+    sprintf(thread_id_s, "%ld", message.tid); //DEBUG
 
-    //converting integers to strings and making i (universal identifier -> <i><.><process id>)
-    char t_s[10], i_s[10], thread_id_s[20], process_id_s[10];
-
-    sprintf(t_s, "%d", t);
-    sprintf(thread_id_s, "%ld", thread_id);
-    sprintf(process_id_s, "%d", process_id);
-    sprintf(i_s, "%d", i);
-    strcat(i_s, ".");
-    strcat(i_s, process_id_s);
-    /*
-    sprintf(t_s, "%d", message.t);
-    sprintf(thread_id_s, "%ld", message.tid);
     sprintf(process_id_s, "%d", message.pid);
-    sprintf(i_s, "%d", i);
-    strcat(i_s, ".");
+    sprintf(i_s, "%d", (int) arg);
     strcat(i_s, process_id_s);
-    */
-    printf("\tid: %s", i_s);  //DEBUG
 
-    //creating request message
+    message.i = atoi(i_s);
+
+    printf("i: %d\tt: %d\tpid: %u\ttid: %lu\tres: %d", message.i, message.t, message.pid, message.tid, message.res); //DEBUG 
+
+    //creating request message DEPRECATED
+    /*
     char request[80];
 
     strcat(request, i_s);
@@ -169,6 +162,7 @@ void *send_request_and_wait_response(void * arg)
     strcat(request, "-1");
 
     printf("\trequest: %s\n", request);  //DEBUG
+    */
     
 
     //opening public fifo and sending request
@@ -190,7 +184,7 @@ void *send_request_and_wait_response(void * arg)
     strcat(priv_fifo_path, ".");
     strcat(priv_fifo_path, thread_id_s);
 
-    printf("\t private path: %s\n", priv_fifo_path);  //DEBUG
+    printf("\t priv_fifo: %s\n", priv_fifo_path);  //DEBUG
 
     // Creating private fifo file
     if(mkfifo(priv_fifo_path, 0777) == -1){
@@ -198,8 +192,8 @@ void *send_request_and_wait_response(void * arg)
     }
 
     //sending request to server
-    write(public_fd, request, strlen(request) + 1);
-    //write(public_fd, &message, sizeof(MSG));
+    //write(public_fd, request, strlen(request) + 1);
+    write(public_fd, &message, sizeof(MSG));
 
     //the server has closed the read side of pipe
     if(errno == EPIPE){
@@ -358,7 +352,7 @@ int main(int argc, char* argv[]){
     }
 
     //thread unique identifier
-    long int id = 1;
+    int id = 1;
 
     /*-------------------------CREATING REQUEST THREADS-------------------------*/
 
