@@ -33,7 +33,7 @@
 #define GAVUP "GAVUP"
 #define FAILD "FAILD"
 
-struct msg { int i; int t; pid_t pid; pthread_t tid; int res; } typedef MSG;
+typedef struct message { int rid; pid_t pid; pthread_t tid; int tskload; int tskres; } message_t;
 
 /*-------------------------GLOBAL VARIABLES-------------------------*/
 
@@ -87,25 +87,17 @@ void reg(char *i, char *t, char *pid, char  *tid, char *res, char *oper){
 }
 
 //The parameters aren't all necessary
-void handle_server_response(char *response, char * i_s, char * t_s, char * process_id_s, char * thread_id_s){
+void handle_server_response(message_t message, char * i_s, char * t_s, char * process_id_s, char * thread_id_s){
+    char result[80];
+    sprintf(result, "%d", message.tskres);
     
-    char * p[5];
-   
-    p[0] = strtok(response,"; ");
-
-    for(int i = 0; i < 5; i++)
-    {
-        printf("%s\n",p[i]);
-        p[i] = strtok(NULL, "; ");
-    }
-/*
-    if(p[4] == "-1"){
+    if(message.tskres == -1){
         printf("The request wasn't attended, because server service is closed\n");
         reg(i_s, t_s, process_id_s, thread_id_s, "-1", CLOSD);
     }
     else{
-        reg(i_s, t_s, process_id_s, thread_id_s, p[4], GOTRS);
-    }*/
+        reg(i_s, t_s, process_id_s, thread_id_s, result, GOTRS);
+    }
 }
 
 /**
@@ -127,25 +119,25 @@ void *send_request_and_wait_response(void * arg)
     int process_id = getpid(); */
 
     //creating message request to send to server
-    MSG message;
+    message_t message;
     
-    message.t = rand() % 9 + 1;
+    message.tskload = rand() % 9 + 1;
     message.pid = getpid();
     message.tid = pthread_self();
-    message.res = -1;
+    message.tskres = -1;
 
     char t_s[10], i_s[10], thread_id_s[20], process_id_s[10]; //converting integers to strings
 
-    sprintf(t_s, "%d", message.t);  //DEBUG
+    sprintf(t_s, "%d", message.tskload);  //DEBUG
     sprintf(thread_id_s, "%ld", message.tid); //DEBUG
 
     sprintf(process_id_s, "%d", message.pid);
     sprintf(i_s, "%d", (int) arg);
     strcat(i_s, process_id_s);
 
-    message.i = atoi(i_s);
+    message.rid = atoi(i_s);
 
-    printf("i: %d\tt: %d\tpid: %u\ttid: %lu\tres: %d", message.i, message.t, message.pid, message.tid, message.res); //DEBUG 
+    printf("i: %d\tt: %d\tpid: %u\ttid: %lu\tres: %d", message.rid, message.tskload, message.pid, message.tid, message.tskres); //DEBUG 
 
     //creating request message DEPRECATED
     /*
@@ -193,7 +185,7 @@ void *send_request_and_wait_response(void * arg)
 
     //sending request to server
     //write(public_fd, request, strlen(request) + 1);
-    write(public_fd, &message, sizeof(MSG));
+    write(public_fd, &message, sizeof(message_t));
 
     //the server has closed the read side of pipe
     if(errno == EPIPE){
@@ -204,24 +196,29 @@ void *send_request_and_wait_response(void * arg)
     //registering operation to stdout
     reg(i_s, t_s, process_id_s, thread_id_s, "-1", IWANT);
     
-    printf("before\n"); //DEBUG
+    //printf("before\n"); //DEBUG
 
     //getting the response from the server
     int private_fd = open(priv_fifo_path, O_RDONLY);
 
-    printf("after\n"); //DEBUG
+    //printf("after\n"); //DEBUG
 
     if(private_fd == ERROR){ 
         printf("Error while opening private fifo file!\n");
     }
-
+/*
     char response[80];
 
     //reading the response until the name pipe is closed and still remains execution time in client
     int r = 1;
     while(!time_is_up && r > 0){
         r = read(private_fd, response, 80);
+        read(public_fd, &message, sizeof(message_t));
     }
+    */
+
+    message_t response;
+    read(private_fd, &response, sizeof(message_t));
     
 
     if(time_is_up){
@@ -229,12 +226,12 @@ void *send_request_and_wait_response(void * arg)
         return NULL;
     }
 
-    //handle_server_response(response, i_s, t_s, process_id_s, thread_id_s);
+    handle_server_response(response, i_s, t_s, process_id_s, thread_id_s);
     
-    printf("Server response: %s\n", response); //DEBUG
+    //printf("Server response: %s\n", response); //DEBUG
 
 
-close(public_fd);
+    close(public_fd);
 
     //closing private fifo file
     close(private_fd);
