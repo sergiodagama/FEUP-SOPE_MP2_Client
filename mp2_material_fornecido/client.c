@@ -128,7 +128,7 @@ void *send_request_and_wait_response(void * arg)
     MSG message;
 
     message.i = (long int) arg;
-    message.t = rand() % 9 + 1;;
+    message.t = rand() % 9 + 1;
     message.pid = getpid();
     message.tid = pthread_self();
     message.res = -1;
@@ -198,8 +198,8 @@ void *send_request_and_wait_response(void * arg)
     }
 
     //sending request to server
-    //write(public_fd, request, strlen(request) + 1);
-    write(public_fd, &message, sizeof(MSG));
+    write(public_fd, request, strlen(request) + 1);
+    //write(public_fd, &message, sizeof(MSG));
 
     //the server has closed the read side of pipe
     if(errno == EPIPE){
@@ -210,8 +210,6 @@ void *send_request_and_wait_response(void * arg)
     //registering operation to stdout
     reg(i_s, t_s, process_id_s, thread_id_s, "-1", IWANT);
     
-    close(public_fd);
-
     printf("before\n"); //DEBUG
 
     //getting the response from the server
@@ -241,8 +239,13 @@ void *send_request_and_wait_response(void * arg)
     
     printf("Server response: %s\n", response); //DEBUG
 
+
+close(public_fd);
+
     //closing private fifo file
     close(private_fd);
+
+
     
 
     //unlocking code with mutex
@@ -328,7 +331,7 @@ int main(int argc, char* argv[]){
     //used to get current seconds in main thread loop
     time_t cur_secs;
         
-    //ARG 1: nº of seconds which the program should run in
+    //ARG 1: seconds identifier
     char *secs_identifier = argv[1]; 
 
     if(strcmp(secs_identifier, "-t") != 0){
@@ -341,6 +344,7 @@ int main(int argc, char* argv[]){
     //ARG 3: public fifo file path (relative or absolute)
     public_fifo_path = argv[3];
 
+    //PROBABLY TO BE REMOVED WHEN TIMEOUT ADDED TO OPEN PUBLIC FIFO
     if(!fifo_file_checker(public_fifo_path)){
         return error_on_input();
     }
