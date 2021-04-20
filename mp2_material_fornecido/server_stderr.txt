@@ -1,0 +1,7 @@
+[server] initial time: 1618941037, expected final time: 1618941057
+[server] got: nsecs=20, bufsize=10, fifoname=/tmp/fifo_gama
+[server] timeout reached: 1618941057
+[server] server, open serverfifo: Interrupted system call
+[server] opened server fifo /tmp/fifo_gama
+[server] unlinked server fifo
+[server] no longer accepting requests

@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #define ERROR -1
+#define CLIENT_WAITING_TIMEOUT 5
 #define MILLISEC_TO_NANOSEC_MULTIPLIER 1000000  //1 millisecond = 1,000,000 nanoseconds
 #define IWANT "IWANT"
 #define RECVD "RECVD"
@@ -158,9 +159,20 @@ void *send_request_and_wait_response(void * arg)
     
 
     //opening public fifo and sending request
+    int timeout = 0;
+    int public_fd;
+
+    while(timeout != CLIENT_WAITING_TIMEOUT){
+        public_fd = open(public_fifo_path, O_WRONLY);
+        sleep(1);
+        timeout++;
+    }
+
+    if(timeout == CLIENT_WAITING_TIMEOUT){
+        public_fifo_closed = true;
+        return NULL;
+    }
     
-     //while(!time_is_up && r > 0){
-    int public_fd = open(public_fifo_path, O_WRONLY);
 
     //MAKE ESPERA ATIVA TODO (TIMEOUT)
 
@@ -336,9 +348,12 @@ int main(int argc, char* argv[]){
     public_fifo_path = argv[3];
 
     //PROBABLY TO BE REMOVED WHEN TIMEOUT ADDED TO OPEN PUBLIC FIFO
+    /*
     if(!fifo_file_checker(public_fifo_path)){
         return error_on_input();
     }
+
+    */
 
     //printf("public fifo path: %s\n", public_fifo_path); //DEBUG
 
@@ -354,7 +369,7 @@ int main(int argc, char* argv[]){
     /*-------------------------CREATING REQUEST THREADS-------------------------*/
 
     //main thread (c0) continously creates new threads with server requests
-    while(true && !public_fifo_closed) {
+    while(true && !public_fifo_closed && !time_is_up) {
         //sleeping for a few milliseconds
         if(random_mili_sleep() == ERROR) return ERROR;
 
@@ -370,12 +385,12 @@ int main(int argc, char* argv[]){
             //clean threads memory and exit everything here
             printf("Execution time has ended!\n");
             time_is_up = true;
-            break;
         }
 
         id++;
     }
 
+    printf("HERE");
     /*-------------------------ENDING PROGRAM-------------------------*/
 
     //releasing pthread mutex structure
