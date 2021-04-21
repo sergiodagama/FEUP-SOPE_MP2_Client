@@ -46,6 +46,10 @@ bool public_fifo_closed = false; //check if public fifo was closed on the read s
 
 bool time_is_up = false; //keep track of execution time
 
+bool debug = false;  //controls if console printfs are on or off
+
+/*-----------------------END GLOBAL VARIABLES-----------------------*/
+
 
 /*-------------------------UTIL FUNCTIONS-------------------------*/
 
@@ -63,12 +67,9 @@ void reg(char *i, char *t, char *pid, char  *tid, char *res, char *oper){
     time_t inst;
     time(&inst);
 
-    char reg_string[160];
-
-    char inst_s[20];
+    char reg_string[160], inst_s[20];
 
     sprintf(inst_s, "%ld", inst);
-
     strcat(reg_string, inst_s);
     strcat(reg_string, " ; ");
     strcat(reg_string, i);
@@ -87,13 +88,21 @@ void reg(char *i, char *t, char *pid, char  *tid, char *res, char *oper){
     fprintf(stdout, reg_string);
 }
 
-//The parameters aren't all necessary
+/**
+ * @brief handles the response that it is give by the server
+ * 
+ * @param message the message struct sent by server
+ * @param i_s the client unique identifier
+ * @param t_s the number of the task
+ * @param process_id_s the clinet process id
+ * @param thread_id_s the client thread id
+ */
 void handle_server_response(message_t message, char * i_s, char * t_s, char * process_id_s, char * thread_id_s){
     char result[80];
     sprintf(result, "%d", message.tskres);
     
     if(message.tskres == -1){
-        printf("The request wasn't attended, because server service is closed\n");
+        fprintf(stderr, "[client thread] The request wasn't attended, because server service is closed\n");
         reg(i_s, t_s, process_id_s, thread_id_s, "-1", CLOSD);
     }
     else{
@@ -102,9 +111,18 @@ void handle_server_response(message_t message, char * i_s, char * t_s, char * pr
 }
 
 /**
+ * @brief stops mutex and closes thread
+ * 
+ */
+void close_client_inner_thread(){
+    pthread_mutex_unlock(&lock);
+    pthread_exit((void*) 0);
+}
+
+/**
  * @brief sends requests to server through client's threads
  * 
- * @param arg 
+ * @param arg the i from the lopp, part of unique identifier of thread
  * @return void* 
  */
 void *send_request_and_wait_response(void * arg)
@@ -112,12 +130,23 @@ void *send_request_and_wait_response(void * arg)
     //locking code wiht mutex
     pthread_mutex_lock(&lock);
 
-    //message info variables
-    /*
-    int t = rand() % 9 + 1;
-    int i = (long int) arg;
-    long int thread_id = pthread_self();
-    int process_id = getpid(); */
+    //opening public fifo and checking if server has created it, if not waits for CLIENT_WAITING_TIMEOUT
+    int timeout = 0;
+    int public_fd = ERROR;
+
+    while(timeout != CLIENT_WAITING_TIMEOUT && public_fd == ERROR && !public_fifo_closed){
+        public_fd = open(public_fifo_path, O_WRONLY | O_NONBLOCK);
+        sleep(1);
+        if(debug) printf("timeout open: %d\n", timeout + 1); //DEBUG
+        timeout++;
+    }
+
+    //when the public fifo wasn't created or it was closed
+    if(public_fd == ERROR){ 
+        fprintf(stderr, "[client thread] Error while opening public fifo file!\n");
+        public_fifo_closed = true;  
+        close_client_inner_thread();
+    }
 
     //creating message request to send to server
     message_t message;
@@ -133,47 +162,12 @@ void *send_request_and_wait_response(void * arg)
     sprintf(thread_id_s, "%ld", message.tid); //DEBUG
 
     sprintf(process_id_s, "%d", message.pid);
-    sprintf(i_s, "%d", (int) arg);
+    sprintf(i_s, "%ld", (long int) arg);
     strcat(i_s, process_id_s);
 
     message.rid = atoi(i_s);
 
-    printf("i: %d\tt: %d\tpid: %u\ttid: %lu\tres: %d", message.rid, message.tskload, message.pid, message.tid, message.tskres); //DEBUG 
-
-    //creating request message DEPRECATED
-    /*
-    char request[80];
-
-    strcat(request, i_s);
-    strcat(request, " ");
-    strcat(request, t_s);
-    strcat(request, " ");
-    strcat(request, process_id_s);
-    strcat(request, " ");
-    strcat(request, thread_id_s);
-    strcat(request, " ");
-    strcat(request, "-1");
-
-    printf("\trequest: %s\n", request);  //DEBUG
-    */
-    
-
-    //opening public fifo and sending request
-    int timeout = 0;
-    int public_fd = ERROR;
-
-    while(timeout != CLIENT_WAITING_TIMEOUT && public_fd == ERROR){
-        public_fd = open(public_fifo_path, O_WRONLY | O_NONBLOCK);
-        sleep(1);
-        timeout++;
-    }
-
-    if(public_fd == ERROR){ 
-        printf("Error while opening public fifo file!\n");
-        public_fifo_closed = true;  //to close entire program, but not working yet
-        //exit(0);
-        return NULL;
-    }
+    if(debug) printf("i: %d\tt: %d\tpid: %u\ttid: %lu\tres: %d", message.rid, message.tskload, message.pid, message.tid, message.tskres); //DEBUG 
 
     //creating private fifo file path ("/tmp/pid.tid") to receive server response
     char priv_fifo_path[40];
@@ -183,71 +177,66 @@ void *send_request_and_wait_response(void * arg)
     strcat(priv_fifo_path, ".");
     strcat(priv_fifo_path, thread_id_s);
 
-    printf("\t priv_fifo: %s\n", priv_fifo_path);  //DEBUG
+    if(debug) printf("\t priv_fifo: %s\n", priv_fifo_path);  //DEBUG
 
     // Creating private fifo file
-    if(mkfifo(priv_fifo_path, 0777) == -1){
-        return NULL;
+    if(mkfifo(priv_fifo_path, 0777) == ERROR){
+        close_client_inner_thread();                                                  
     }
 
     //sending request to server
-    //write(public_fd, request, strlen(request) + 1);
     write(public_fd, &message, sizeof(message_t));
 
     //the server has closed the read side of pipe
     if(errno == EPIPE){
+        fprintf(stderr, "[client thread] The server has closed the public fifo read side\n");
         public_fifo_closed = true;
-        return NULL;
+        close_client_inner_thread();
     }
 
     //registering operation to stdout
     reg(i_s, t_s, process_id_s, thread_id_s, "-1", IWANT);
-    
-    //printf("before\n"); //DEBUG
 
     //getting the response from the server
     int private_fd = open(priv_fifo_path, O_RDONLY);
 
-    //printf("after\n"); //DEBUG
-
     if(private_fd == ERROR){ 
-        printf("Error while opening private fifo file!\n");
+        fprintf(stderr, "[client thread] Error while opening private fifo file!\n");
+        close_client_inner_thread();
     }
-/*
-    char response[80];
 
-    //reading the response until the name pipe is closed and still remains execution time in client
-    int r = 1;
-    while(!time_is_up && r > 0){
-        r = read(private_fd, response, 80);
-        read(public_fd, &message, sizeof(message_t));
-    }
-    */
-
+    //getting the response from server
     message_t response;
-    read(private_fd, &response, sizeof(message_t));
-    
 
-    if(time_is_up){
-        reg(i_s, t_s, process_id_s, thread_id_s, "", GAVUP);
-        return NULL;
+    int bytes_read = ERROR;
+    int tout = 1;  //DEBUG
+
+    while(bytes_read == ERROR){
+        bytes_read = read(private_fd, &response, sizeof(message_t)); 
+        if(bytes_read != ERROR || time_is_up){
+            break;
+        }
+        if(debug) printf("timeout read: %d", tout);  //DEBUG
+        tout++;  //DEBUG
+        sleep(1);
     }
-
-    handle_server_response(response, i_s, t_s, process_id_s, thread_id_s);
     
-    //printf("Server response: %s\n", response); //DEBUG
-
-
+    if(time_is_up && bytes_read == ERROR){
+        reg(i_s, t_s, process_id_s, thread_id_s, "", GAVUP);
+        close_client_inner_thread();
+    }
+    else{
+        handle_server_response(response, i_s, t_s, process_id_s, thread_id_s);
+    }
+    
+    //closing fifo files
     close(public_fd);
-
-    //closing private fifo file
     close(private_fd);
 
+    //closing thread and unlocking code with mutex
+    close_client_inner_thread();
 
-    
-
-    //unlocking code with mutex
-    pthread_mutex_unlock(&lock);
+    return NULL;
 }
 
 /**
@@ -300,9 +289,12 @@ bool fifo_file_checker(char file_name[]){
  * @return ERROR value (-1)
  */
 int error_on_input(){
-    printf("Usage: ./c <-t nsecs> <fifoname>\n");
+    fprintf(stderr, "Usage: ./c <-t nsecs> <fifoname>\n");
     return ERROR;
 }
+
+/*-----------------------END UTIL FUNCTIONS-------------------------*/
+
 
 /*-------------------------MAIN THREAD-------------------------*/
 
@@ -342,24 +334,14 @@ int main(int argc, char* argv[]){
     //ARG 3: public fifo file path (relative or absolute)
     public_fifo_path = argv[3];
 
-    //PROBABLY TO BE REMOVED WHEN TIMEOUT ADDED TO OPEN PUBLIC FIFO
-    /*
-    if(!fifo_file_checker(public_fifo_path)){
-        return error_on_input();
-    }
-
-    */
-
-    //printf("public fifo path: %s\n", public_fifo_path); //DEBUG
-
     //initializing pthread mutex structure
     if (pthread_mutex_init(&lock, NULL) != 0) {
-        printf("Mutex init has failed\n");
+        fprintf(stderr, "Mutex init has failed\n");
         return ERROR;
     }
 
     //thread unique identifier
-    int id = 1;
+    long int id = 1;
 
     /*-------------------------CREATING REQUEST THREADS-------------------------*/
 
@@ -371,24 +353,26 @@ int main(int argc, char* argv[]){
         //creating threads
         pthread_t thread_id;
 
+        if(debug) printf("created thread number: %ld \n", id); //DEBUG
+
         if(pthread_create(&thread_id, NULL, &send_request_and_wait_response, (void*)id) != 0) return ERROR;
 
         //checking if nsecs have passed already
         time(&cur_secs);
 
         if (cur_secs - initial_time >= nsecs){
-            //clean threads memory and exit everything here
-            printf("Execution time has ended!\n");
+            fprintf(stderr, "\n[client] Execution time has ended!\n");
             time_is_up = true;
         }
 
         id++;
     }
 
-    printf("HERE");
     /*-------------------------ENDING PROGRAM-------------------------*/
 
-        //main thread waits for all threads to exit
+    fprintf(stderr, "[client] Waiting for other threads to finish...\n");
+
+    //main thread waits for all threads to exit
     pthread_exit(NULL);
     
     //releasing pthread mutex structure

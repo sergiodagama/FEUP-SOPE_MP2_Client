@@ -1,7 +1,87 @@
-[server] initial time: 1618941037, expected final time: 1618941057
+[server] initial time: 1619027478, expected final time: 1619027498
 [server] got: nsecs=20, bufsize=10, fifoname=/tmp/fifo_gama
-[server] timeout reached: 1618941057
-[server] server, open serverfifo: Interrupted system call
 [server] opened server fifo /tmp/fifo_gama
+[lib] a 9 task is starting (with 0 delay)
+[lib] a 9 task has finished
+[server] opened client fifo /tmp/7681.140604042462976
+[server] all clients closed, will wait for new ones
+[lib] a 3 task is starting (with 0 delay)
+[lib] a 3 task has finished
+[server] opened client fifo /tmp/7681.140604034070272
+[server] all clients closed, will wait for new ones
+[lib] a 1 task is starting (with 0 delay)
+[lib] a 1 task has finished
+[server] opened client fifo /tmp/7681.140604025677568
+[server] all clients closed, will wait for new ones
+[lib] a 3 task is starting (with 0 delay)
+[lib] a 3 task has finished
+[server] opened client fifo /tmp/7681.140604017284864
+[server] all clients closed, will wait for new ones
+[lib] a 4 task is starting (with 0 delay)
+[lib] a 4 task has finished
+[server] opened client fifo /tmp/7681.140604008892160
+[server] all clients closed, will wait for new ones
+[lib] a 1 task is starting (with 0 delay)
+[lib] a 1 task has finished
+[server] opened client fifo /tmp/7681.140604000499456
+[server] all clients closed, will wait for new ones
+[lib] a 1 task is starting (with 0 delay)
+[lib] a 1 task has finished
+[server] opened client fifo /tmp/7681.140603992106752
+[server] all clients closed, will wait for new ones
+[lib] a 9 task is starting (with 0 delay)
+[lib] a 9 task has finished
+[server] opened client fifo /tmp/7681.140603983714048
+[server] all clients closed, will wait for new ones
+[lib] a 9 task is starting (with 0 delay)
+[lib] a 9 task has finished
+[server] opened client fifo /tmp/7681.140603975321344
+[server] all clients closed, will wait for new ones
+[lib] a 6 task is starting (with 0 delay)
+[lib] a 6 task has finished
+[server] opened client fifo /tmp/7681.140603966928640
+[server] all clients closed, will wait for new ones
+[lib] a 1 task is starting (with 0 delay)
+[lib] a 1 task has finished
+[server] opened client fifo /tmp/7681.140603958535936
+[server] all clients closed, will wait for new ones
+[lib] a 5 task is starting (with 0 delay)
+[lib] a 5 task has finished
+[server] opened client fifo /tmp/7681.140603950143232
+[server] all clients closed, will wait for new ones
+[lib] a 5 task is starting (with 0 delay)
+[lib] a 5 task has finished
+[server] opened client fifo /tmp/7681.140603941750528
+[server] all clients closed, will wait for new ones
+[lib] a 9 task is starting (with 0 delay)
+[lib] a 9 task has finished
+[server] opened client fifo /tmp/7681.140603933357824
+[server] all clients closed, will wait for new ones
+[lib] a 4 task is starting (with 0 delay)
+[lib] a 4 task has finished
+[server] opened client fifo /tmp/7681.140603924965120
+[server] all clients closed, will wait for new ones
+[lib] a 2 task is starting (with 0 delay)
+[lib] a 2 task has finished
+[server] opened client fifo /tmp/7681.140603916572416
+[server] all clients closed, will wait for new ones
+[lib] a 7 task is starting (with 0 delay)
+[lib] a 7 task has finished
+[server] opened client fifo /tmp/7681.140603908179712
+[server] all clients closed, will wait for new ones
+[lib] a 7 task is starting (with 0 delay)
+[lib] a 7 task has finished
+[server] opened client fifo /tmp/7681.140603899787008
+[server] all clients closed, will wait for new ones
+[lib] a 1 task is starting (with 0 delay)
+[lib] a 1 task has finished
+[server] opened client fifo /tmp/7681.140603891394304
+[server] all clients closed, will wait for new ones
+[server] timeout reached: 1619027498
+[server] unlinked server fifo
+[server] unlinked server fifo
+[server] opened client fifo /tmp/7681.140603883001600
+[server] all clients closed, will wait for new ones
+[server] server, open serverfifo: No such file or directory
 [server] unlinked server fifo
 [server] no longer accepting requests
