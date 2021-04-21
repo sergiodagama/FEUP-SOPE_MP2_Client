@@ -1,0 +1,331 @@
+void get_opt(int param_1,char **param_2)
+
+{
+  int iVar1;
+  time_t tVar2;
+  time_t tVar3;
+  long lVar4;
+  
+  if (param_1 < 3) {
+    fprintf(stderr,"Usage: %s <-t nsecs> [-l bufsize] fifoname\n",*param_2);
+                    /* WARNING: Subroutine does not return */
+    exit(1);
+  }
+  while( true ) {
+    iVar1 = getopt(param_1,param_2,"t:l:");
+    if (iVar1 == -1) break;
+    if (iVar1 == 0x6c) {
+      nplaces = atoi(optarg);
+      printf("[server] buffer size: %d\n",(ulong)nplaces);
+    }
+    else {
+      if (iVar1 != 0x74) {
+        fprintf(stderr,"Usage: %s <-t nsecs> [-l bufsize] fifoname\n",*param_2);
+                    /* WARNING: Subroutine does not return */
+        exit(1);
+      }
+      timeout = atoi(optarg);
+      tVar2 = time((time_t *)0x0);
+      lVar4 = (long)(int)timeout;
+      tVar3 = time((time_t *)0x0);
+      fprintf(stderr,"[server] initial time: %lu, expected final time: %lu\n",tVar3,tVar2 + lVar4);
+    }
+  }
+  if (param_1 + -1 != optind) {
+    fprintf(stderr,"Usage: %s <-t nsecs> [-l bufsize] fifoname\n",*param_2);
+                    /* WARNING: Subroutine does not return */
+    exit(1);
+  }
+  serverfifoname = param_2[optind];
+  fprintf(stderr,"[server] got: nsecs=%d, bufsize=%d, fifoname=%s\n",(ulong)timeout,(ulong)nplaces,
+          serverfifoname);
+  return;
+}
+
+
+
+void alrm(void)
+
+{
+  time_t tVar1;
+  
+  finish = 1;
+  tVar1 = time((time_t *)0x0);
+  fprintf(stderr,"[server] timeout reached: %ld\n",tVar1);
+  return;
+}
+
+
+
+void task_thread(uint *param_1)
+
+{
+  uint uVar1;
+  uint uVar2;
+  uint uVar3;
+  pthread_t pVar4;
+  time_t tVar5;
+  undefined8 uVar6;
+  uint local_34;
+  
+  if (finish == 0) {
+    local_34 = task(param_1[4]);
+    pVar4 = pthread_self();
+    uVar3 = getpid();
+    uVar1 = param_1[4];
+    uVar2 = *param_1;
+    uVar6 = 0x10006b;
+    tVar5 = time((time_t *)0x0);
+    printf("%ld; %d; %d; %d; %lu; %d; TSKEX\n",tVar5,(ulong)uVar2,(ulong)uVar1,(ulong)uVar3,pVar4,
+           (ulong)local_34,uVar6);
+  }
+  else {
+    local_34 = 0xffffffff;
+  }
+  sem_wait(writer_sem);
+  pthread_mutex_lock((pthread_mutex_t *)mut_buf);
+  *(uint *)(buffer + (long)buf_writer * 0x18 + 0x10) = param_1[4];
+  *(uint *)(buffer + (long)buf_writer * 0x18 + 0x14) = local_34;
+  *(uint *)(buffer + (long)buf_writer * 0x18) = *param_1;
+  *(uint *)(buffer + (long)buf_writer * 0x18 + 4) = param_1[1];
+  *(undefined8 *)(buffer + (long)buf_writer * 0x18 + 8) = *(undefined8 *)(param_1 + 2);
+  buf_writer = 0;
+  pthread_mutex_unlock((pthread_mutex_t *)mut_buf);
+  sem_post(reader_sem);
+  free(param_1);
+                    /* WARNING: Subroutine does not return */
+  pthread_exit((void *)0x0);
+}
+
+
+void reader_thread(void)
+
+{
+  ulong uVar1;
+  ulong uVar2;
+  int __fd;
+  uint uVar3;
+  long lVar4;
+  ssize_t sVar5;
+  pthread_t pVar6;
+  time_t tVar7;
+  long in_FS_OFFSET;
+  undefined8 uVar8;
+  undefined4 local_478;
+  uint uStack1140;
+  undefined local_468 [4];
+  __pid_t local_464;
+  pthread_t local_460;
+  undefined4 local_458;
+  uint local_454;
+  char local_448 [1032];
+  undefined8 local_40;
+  
+  local_40 = *(undefined8 *)(in_FS_OFFSET + 0x28);
+  while ((nomore == 0 || (runnng != 0))) {
+    sem_wait(reader_sem);
+    pthread_mutex_lock((pthread_mutex_t *)mut_buf);
+    lVar4 = (long)buf_reader * 0x18;
+    uVar1 = *(ulong *)(buffer + lVar4);
+    uVar8 = *(undefined8 *)(buffer + lVar4 + 8);
+    uVar2 = *(ulong *)(buffer + lVar4 + 0x10);
+    buf_reader = 0;
+    pthread_mutex_unlock((pthread_mutex_t *)mut_buf);
+    sem_post(writer_sem);
+    sprintf(local_448,"/tmp/%d.%lu",uVar1 >> 0x20,uVar8);
+    __fd = open(local_448,1);
+    if (__fd < 0) {
+      perror("open client fifo");
+    }
+    fprintf(stderr,"[server] opened client fifo %s\n",local_448);
+    local_464 = getpid();
+    local_460 = pthread_self();
+    local_478 = (undefined4)uVar2;
+    local_458 = local_478;
+    uStack1140 = (uint)(uVar2 >> 0x20);
+    local_454 = uStack1140;
+    sVar5 = write(__fd,local_468,0x18);
+    if ((int)sVar5 < 0) {
+      pVar6 = pthread_self();
+      uVar3 = getpid();
+      uVar8 = 0x100381;
+      tVar7 = time((time_t *)0x0);
+      printf("%ld; %d; %d; %d; %lu; %d; FAILD\n",tVar7,uVar1 & 0xffffffff,uVar2 & 0xffffffff,
+             (ulong)uVar3,pVar6,(ulong)uStack1140,uVar8);
+    }
+    else {
+      if ((long)uVar2 < 0) {
+        pVar6 = pthread_self();
+        uVar3 = getpid();
+        uVar8 = 0x1003e7;
+        tVar7 = time((time_t *)0x0);
+        printf("%ld; %d; %d; %d; %lu; %d; 2LATE\n",tVar7,uVar1 & 0xffffffff,uVar2 & 0xffffffff,
+               (ulong)uVar3,pVar6,(ulong)uStack1140,uVar8);
+      }
+      else {
+        pVar6 = pthread_self();
+        uVar3 = getpid();
+        uVar8 = 0x100440;
+        tVar7 = time((time_t *)0x0);
+        printf("%ld; %d; %d; %d; %lu; %d; TSKDN\n",tVar7,uVar1 & 0xffffffff,uVar2 & 0xffffffff,
+               (ulong)uVar3,pVar6,(ulong)uStack1140,uVar8);
+      }
+    }
+    close(__fd);
+    pthread_mutex_lock((pthread_mutex_t *)mut_cnt);
+    runnng = runnng + -1;
+    pthread_mutex_unlock((pthread_mutex_t *)mut_cnt);
+  }
+  fwrite("[server] reader thread terminating\n",1,0x23,stderr);
+                    /* WARNING: Subroutine does not return */
+  pthread_exit((void *)0x0);
+}
+
+
+
+void main(undefined4 param_1,undefined8 param_2)
+
+{
+  uint uVar1;
+  uint uVar2;
+  uint uVar3;
+  int iVar4;
+  uint uVar5;
+  int *piVar6;
+  ssize_t sVar7;
+  pthread_t pVar8;
+  time_t tVar9;
+  long in_FS_OFFSET;
+  undefined8 uVar10;
+  pthread_t local_210;
+  pthread_t local_208;
+  uint *local_200;
+  undefined local_1f8 [136];
+  ulong local_170;
+  ulong local_168;
+  ulong local_160;
+  ulong local_158;
+  ulong local_150;
+  ulong local_148;
+  ulong local_140;
+  ulong local_138;
+  ulong local_130;
+  ulong local_128;
+  ulong local_120;
+  ulong local_118;
+  ulong local_110;
+  ulong local_108;
+  ulong local_100;
+  ulong local_f8;
+  undefined4 local_f0;
+  ulong uStack64;
+  
+  uStack64 = *(ulong *)(in_FS_OFFSET + 0x28);
+  get_opt(param_1,param_2,param_2);
+  if (timeout == 0) {
+    fwrite("[server] no timeout set\n",1,0x18,stderr);
+  }
+  else {
+    sigemptyset((sigset_t *)local_1f8);
+    local_1f8._128_8_ = alrm;
+    local_170 = local_1f8._0_8_;
+    local_168 = local_1f8._8_8_;
+    local_160 = local_1f8._16_8_;
+    local_158 = local_1f8._24_8_;
+    local_150 = local_1f8._32_8_;
+    local_148 = local_1f8._40_8_;
+    local_140 = local_1f8._48_8_;
+    local_138 = local_1f8._56_8_;
+    local_130 = local_1f8._64_8_;
+    local_128 = local_1f8._72_8_;
+    local_120 = local_1f8._80_8_;
+    local_118 = local_1f8._88_8_;
+    local_110 = local_1f8._96_8_;
+    local_108 = local_1f8._104_8_;
+    local_100 = local_1f8._112_8_;
+    local_f8 = local_1f8._120_8_;
+    local_f0 = 0;
+    iVar4 = sigaction(0xe,(sigaction *)(local_1f8 + 0x80),(sigaction *)&stack0xffffffffffffff28);
+    if (iVar4 == -1) {
+      perror("sigaction (SIGALRM)");
+    }
+    alarm(timeout);
+  }
+  iVar4 = mkfifo(serverfifoname,0x1b6);
+  if ((iVar4 < 0) && (piVar6 = __errno_location(), *piVar6 != 0x11)) {
+    perror("mkfifo serverfifoname");
+  }
+  serverfifo = open(serverfifoname,0);
+  if (serverfifo < 0) {
+    perror("[server] server, open serverfifo");
+    unlink(serverfifoname);
+  }
+  fprintf(stderr,"[server] opened server fifo %s\n",serverfifoname);
+  reader_sem = sem_open("rsem",0x40,0x1b6,0);
+  if (reader_sem == (sem_t *)0x0) {
+    perror("[server] reader semaphore");
+    unlink(serverfifoname);
+  }
+  writer_sem = sem_open("wsem",0x40,0x1b6,1);
+  if (writer_sem == (sem_t *)0x0) {
+    perror("[server] writer semaphore");
+    unlink(serverfifoname);
+    sem_unlink("rsem");
+  }
+  iVar4 = pthread_create(&local_210,(pthread_attr_t *)0x0,reader_thread,(void *)0x0);
+  if (iVar4 != 0) {
+    perror("[server] server thread");
+  }
+  do {
+    while( true ) {
+      if (finish != 0) {
+        unlink(serverfifoname);
+        fwrite("[server] unlinked server fifo\n",1,0x1e,stderr);
+      }
+      local_200 = (uint *)malloc(0x18);
+      sVar7 = read(serverfifo,local_200,0x18);
+      if ((int)(uint)sVar7 < 0) break;
+      if ((uint)sVar7 < 0x18) {
+        fwrite("[server] all clients closed, will wait for new ones\n",1,0x34,stderr);
+        serverfifo = open(serverfifoname,0);
+        if (serverfifo < 0) {
+          perror("[server] server, open serverfifo");
+          unlink(serverfifoname);
+        }
+      }
+      else {
+        uVar1 = local_200[5];
+        pVar8 = pthread_self();
+        uVar5 = getpid();
+        uVar2 = local_200[4];
+        uVar3 = *local_200;
+        uVar10 = 0x10097f;
+        tVar9 = time((time_t *)0x0);
+        printf("%ld; %d; %d; %d; %lu; %d; RECVD\n",tVar9,(ulong)uVar3,(ulong)uVar2,(ulong)uVar5,
+               pVar8,(ulong)uVar1,uVar10);
+        iVar4 = pthread_create(&local_208,(pthread_attr_t *)0x0,task_thread,local_200);
+        if (iVar4 != 0) {
+          perror("[server] server thread");
+        }
+        pthread_mutex_lock((pthread_mutex_t *)mut_cnt);
+        runnng = runnng + 1;
+        pthread_mutex_unlock((pthread_mutex_t *)mut_cnt);
+      }
+    }
+    piVar6 = __errno_location();
+  } while (*piVar6 == 4);
+  fwrite("[server] no longer accepting requests\n",1,0x26,stderr);
+  nomore = 1;
+  if (runnng == 0) {
+    pthread_cancel(local_210);
+  }
+  else {
+    pthread_join(local_210,(void **)0x0);
+  }
+  unlink(serverfifoname);
+  close(serverfifo);
+  sem_unlink("rsem");
+  sem_unlink("wsem");
+                    /* WARNING: Subroutine does not return */
+  pthread_exit((void *)0x0);
+}
