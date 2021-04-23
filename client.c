@@ -26,13 +26,13 @@
 #define MILLISEC_TO_NANOSEC_MULTIPLIER 1000000  //1 millisecond = 1,000,000 nanoseconds
 #define IWANT "IWANT"
 #define RECVD "RECVD"
-#define TSKEX "TSKEX"
-#define TSKDN "TSKDN"
+//#define TSKEX "TSKEX"
+//#define TSKDN "TSKDN"
 #define GOTRS "GOTRS"
-#define TLATE "2LATE"
+//#define TLATE "2LATE"
 #define CLOSD "CLOSD"
 #define GAVUP "GAVUP"
-#define FAILD "FAILD"
+//#define FAILD "FAILD"
 
 typedef struct message { int rid; pid_t pid; pthread_t tid; int tskload; int tskres; } message_t;
 
@@ -223,6 +223,12 @@ void *send_request_and_wait_response(void * arg)
     
     if(time_is_up && bytes_read == ERROR){
         reg(i_s, t_s, process_id_s, thread_id_s, "", GAVUP);
+
+        //deleting private fifo file
+        if(remove(priv_fifo_path) != 0){
+            fprintf(stderr, "[client thread] Not successfully deleted private file\n");
+        }
+
         close_client_inner_thread();
     }
     else{
@@ -232,6 +238,11 @@ void *send_request_and_wait_response(void * arg)
     //closing fifo files
     close(public_fd);
     close(private_fd);
+
+    //deleting private fifo file
+    if(remove(priv_fifo_path) != 0){
+        fprintf(stderr, "[client thread] Not successfully deleted private file\n");
+    }
 
     //closing thread and unlocking code with mutex
     close_client_inner_thread();
