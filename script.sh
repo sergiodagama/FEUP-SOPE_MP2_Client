@@ -23,6 +23,21 @@ main() {
 			run_client -t 10 /tmp/fifo_"${USER}";
 			sleep 1 ;
 			run_server -t 20 -l 10 /tmp/fifo_"${USER}";;
+    	4) echo ":::: Test case $1 - Larger Execution Times: S->1 min / C->50 sec";
+			clean;
+			run_server -t 60 -l 10 /tmp/fifo_"${USER}";
+			sleep 1 ;
+			run_client -t 50 /tmp/fifo_"${USER}";;
+    	5) echo ":::: Test case $1 - Larger Execution Times: S->90 sec / C-> 2 min";
+			clean;
+			run_server -t 90 -l 10 /tmp/fifo_"${USER}";
+			sleep 1 ;
+			run_client -t 120 /tmp/fifo_"${USER}";;
+		6) echo ":::: Test case $1 - Larger Waiting time (server starts 6 sec late)";
+			clean;
+			run_client -t 8 /tmp/fifo_"${USER}";
+			sleep 6 ;
+			run_server -t 8 -l 10 /tmp/fifo_"${USER}";;
 		*)  echo "Usage: $0 <test_no> || $0 clean" ;
 			exit 1 ;;
 	esac

@@ -48,6 +48,10 @@ bool time_is_up = false; //keep track of execution time
 
 bool debug = false;  //controls if console printfs are on or off
 
+time_t initial_time;  //holds initial time of program execution
+
+int nsecs;  //number of seconds inputted by user
+
 /*-----------------------END GLOBAL VARIABLES-----------------------*/
 
 
@@ -131,14 +135,23 @@ void *send_request_and_wait_response(void * arg)
     pthread_mutex_lock(&lock);
 
     //opening public fifo and checking if server has created it, if not waits for CLIENT_WAITING_TIMEOUT
-    int timeout = 0;
+    //int timeout = 0;
     int public_fd = ERROR;
+    time_t cur_secs;
 
-    while(timeout != CLIENT_WAITING_TIMEOUT && public_fd == ERROR && !public_fifo_closed){
+    while(/*timeout != CLIENT_WAITING_TIMEOUT*/!time_is_up && public_fd == ERROR && !public_fifo_closed){
         public_fd = open(public_fifo_path, O_WRONLY | O_NONBLOCK);
         sleep(1);
-        if(debug) printf("timeout open: %d\n", timeout + 1); //DEBUG
-        timeout++;
+        //if(debug) printf("timeout open: %d\n", timeout + 1); //DEBUG
+        //timeout++;
+
+        //checking if nsecs have passed already
+        time(&cur_secs);
+
+        if (cur_secs - initial_time >= nsecs){
+            fprintf(stderr, "\n[client] Execution time has ended!\n");
+            time_is_up = true;
+        }
     }
 
     //when the public fifo wasn't created or it was closed
@@ -321,7 +334,6 @@ int main(int argc, char* argv[]){
     /*-------------------------PROGRAM INITIALIZATION-------------------------*/
 
     //getting initial time of program execution
-    time_t initial_time;
     time(&initial_time);
 
     //checking if the coreect number of arguments was given
@@ -340,7 +352,7 @@ int main(int argc, char* argv[]){
     }
     
     //ARG 2: nº of seconds which the program should run in
-    int nsecs = atoi(argv[2]);  
+    nsecs = atoi(argv[2]);  
 
     //ARG 3: public fifo file path (relative or absolute)
     public_fifo_path = argv[3];
