@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+###25abr corrections!
+
 echo ":::::::: SOPE 2020/2021 MT2 ::::::::"
 echo ":::::::: VALIDATION SCRIPT ::::::::"
 
@@ -101,8 +103,9 @@ total_FAILD=$(grep -o -i FAILD server_log.txt | wc -l)
 # total_IWANT = total_GOTRS + total_CLOSD + total_GAVUP
 
 #Consistency server
-# total_RECVD = total_TSKEX + total_2LATE + total_FAILD
-# total_TSKEX = total_TSKDN
+# total_RECVD = total_TSKDN + total_2LATE + total_FAILD
+###25abr incorrecto: # total_RECVD = total_TSKEX + total_2LATE + total_FAILD
+###25abr incorrecto: # total_TSKEX = total_TSKDN
 
 #Consistency client-server
 # total_IWANT = total_RECVD
@@ -131,8 +134,8 @@ ID_DONE_FAILD=$(grep 'TSKDN\|FAILD' server_log.txt | tr -d [:blank:] | awk -F\; 
   if [ "$total_IWANT" -eq $(($total_GOTRS + $total_CLOSD + $total_GAVUP)) ]; then echo "ALL OK"; else echo "ERROR (IWANT-GOTRS-CLOSD-GAVUP)"; fi
 
   echo "Server RECVD: $total_RECVD, Server TSKEX: $total_TSKEX, Server TSKDN: $total_TSKDN, Server 2LATE: $total_2LATE, Server FAILD: $total_FAILD"
-  if [ "$total_RECVD" -eq $(($total_TSKEX + $total_2LATE + $total_FAILD)) ]; then echo "ALL OK"; else echo "ERROR (RECVD-TSKEX-2LATE-FAILD)"; fi
-  if [ "$total_TSKEX" -eq "$total_TSKDN" ]; then echo "ALL OK"; else echo "ERROR (TSKEX-TSKDN)"; fi
+  if [ "$total_RECVD" -eq $(($total_TSKDN + $total_2LATE + $total_FAILD)) ]; then echo "ALL OK"; else echo "ERROR (RECVD-TSKDN-2LATE-FAILD)"; fi	###25abr
+###25abr  if [ "$total_TSKEX" -eq "$total_TSKDN" ]; then echo "ALL OK"; else echo "ERROR (TSKEX-TSKDN)"; fi
 
   if [ "$total_IWANT" -eq "$total_RECVD" ]; then echo "ALL OK"; else echo "ERROR (IWANT-RECVD)"; fi
   if [ "$total_GOTRS" -eq "$total_TSKDN" ]; then echo "ALL OK"; else echo "ERROR (GOTRS-TSKDN)"; fi
@@ -154,8 +157,8 @@ verifySequences() {
 
   if [ "$ID_CLIENT" = "$ID_EXEC_2LATE" ]; then echo "ALL OK"; else echo "ERROR: OPERATIONS EXECUTED DIFFER ON CLIENT vs SERVER"; fi
   if [ "$RES_CLIENT" = "$RES_DONE" ]; then echo "ALL OK"; else echo "ERROR: RESULTS RETURNED DIFFER ON CLIENT vs SERVER"; fi
-  if [ "$RES_CLIENT" = "$RES_EXEC" ]; then echo "ALL OK"; else echo "ERROR: RESULTS RETURNED DIFFER ON CLIENT vs SERVER"; fi
-  if [ "$RES_EXEC" = "$RES_DONE" ]; then echo "ALL OK"; else echo "ERROR: RESULTS RECEIVED DIFFER FROM SENT"; fi
+###25abr  if [ "$RES_CLIENT" = "$RES_EXEC" ]; then echo "ALL OK"; else echo "ERROR: RESULTS RETURNED DIFFER ON CLIENT vs SERVER"; fi
+###25abr  if [ "$RES_EXEC" = "$RES_DONE" ]; then echo "ALL OK"; else echo "ERROR: RESULTS RECEIVED DIFFER FROM SENT"; fi
 }
 
 main "$@"

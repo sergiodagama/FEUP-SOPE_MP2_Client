@@ -25,7 +25,7 @@
 #define CLIENT_WAITING_TIMEOUT 5
 #define MILLISEC_TO_NANOSEC_MULTIPLIER 1000000  //1 millisecond = 1,000,000 nanoseconds
 #define IWANT "IWANT"
-#define RECVD "RECVD"
+//#define RECVD "RECVD"
 //#define TSKEX "TSKEX"
 //#define TSKDN "TSKDN"
 #define GOTRS "GOTRS"
