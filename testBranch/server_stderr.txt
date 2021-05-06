@@ -1,0 +1,19 @@
+[server] initial time: 1620322496, expected final time: 1620322516
+[server] buffer size: 10
+[server] got: nsecs=20, bufsize=10, fifoname=/tmp/fifo_n0il
+[server] opened server fifo /tmp/fifo_n0il
+[server] all clients closed, will wait for new ones
+[lib] a 9 task is starting (with 100 delay)
+[lib] a 9 task has finished
+[server] before sem_wait(&writer_sem)
+[server] after sem_wait(&writer_sem)
+[server] opened client fifo /tmp/19066.139866747393600
+[lib] a 8 task is starting (with 100 delay)
+[lib] a 8 task has finished
+[server] before sem_wait(&writer_sem)
+[server] after sem_wait(&writer_sem)
+[server] opened client fifo /tmp/19040.140342055446080
+[server] all clients closed, will wait for new ones
+[server] server, open serverfifo: No such file or directory
+[server] no longer accepting requests
+[server] no. running: 0
